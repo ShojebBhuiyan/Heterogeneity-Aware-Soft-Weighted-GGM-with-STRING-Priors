@@ -1,0 +1,24 @@
+# PGM scRNA-seq pipeline — pinned loosely for reproducibility; use pyproject.toml as source of truth
+anndata>=0.10
+scanpy>=1.10
+numpy>=1.26
+scipy>=1.11
+pandas>=2.1
+scikit-learn>=1.3
+networkx>=3.2
+matplotlib>=3.8
+seaborn>=0.13
+plotly>=5.18
+tqdm>=4.66
+joblib>=1.3
+pyarrow>=14
+statsmodels>=0.14
+pydantic>=2.5
+PyYAML>=6.0
+rich>=13.7
+tenacity>=8.2
+requests>=2.31
+igraph>=0.11
+leidenalg>=0.10
+# Optional on Python>=3.14: pip install ydata-profiling or sweetviz manually if available
+pytest>=7.4

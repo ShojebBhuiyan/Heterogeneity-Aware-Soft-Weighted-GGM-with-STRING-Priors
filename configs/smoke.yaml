@@ -1,0 +1,21 @@
+# Overrides for pytest / quick runs (deep-merged onto default.yaml)
+paths: {}
+reports: {}
+run:
+  random_seed: 0
+checkpoint:
+  subdirectory: ""
+eda:
+  n_cells_profiling_hint: 400
+clustering:
+  gmm_n_components: 3
+  neighbor_n_pcs: 20
+models:
+  gl_cv_folds: 3
+evaluation:
+  bootstrap_b: 5
+kg:
+  max_genes_for_query: 50
+preprocessing:
+  n_top_hvg: 100
+  n_pcs: 20

@@ -1,0 +1,63 @@
+paths:
+  project_root: null  # defaults to cwd or repo detection
+data:
+  tenx_mtx_dir: datasets/filtered_gene_bc_matrices/hg19
+  interim_dir: data/interim
+  processed_dir: data/processed
+  checkpoint_dir: data/checkpoints
+  external_dir: data/external
+  string_cache_dir: data/external/string_cache
+reports:
+  figures_dir: reports/figures
+  eda_dir: reports/eda
+  results_dir: reports/results
+run:
+  random_seed: 42
+logging:
+  level: INFO
+  console: true
+  log_dir: logs
+  rotating_max_bytes: 10485760
+  rotating_backup_count: 3
+checkpoint:
+  subdirectory: ""
+eda:
+  n_cells_profiling_hint: null
+  umap_neighbors: 15
+  umap_min_dist: 0.5
+ingestion:
+  dataset_name: pbmc3k
+  write_interim_filename: pbmc3k_raw.h5ad
+preprocessing:
+  target_sum: 1e4
+  min_genes: 200
+  min_cells: 3
+  max_pct_counts_mito: 20
+  mitochondrial_prefix: "^MT-"
+  n_top_hvg: 2000
+  n_pcs: 50
+clustering:
+  neighbor_n_neighbors: 15
+  neighbor_n_pcs: 40
+  leiden_resolution: 0.5
+  random_state_leiden: 0
+  gmm_n_components: 8
+  gmm_covariance_type: full
+  gmm_pca_representation: X_pca
+models:
+  gl_alpha: null
+  gl_cv_folds: 3
+  gl_max_iter: 200
+  gl_tol: 0.001
+  adjacency_tol: 1e-4
+kg:
+  species_id: 9606
+  confidence_threshold: 0.7
+  batch_size: 400
+  request_timeout_seconds: 60
+  max_retries: 5
+  cache_enabled: true
+  max_genes_for_query: 500
+evaluation:
+  bootstrap_b: 50
+  bootstrap_fraction: 0.8
