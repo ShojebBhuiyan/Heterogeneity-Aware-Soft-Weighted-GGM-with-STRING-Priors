@@ -1,5 +1,5 @@
 """High-level pipeline entry points."""
 
-from pgm.pipelines.ingest import ingest_pbmc_pipeline
+from pgm.pipelines.eda import run_eda
 
-__all__ = ["ingest_pbmc_pipeline"]
+__all__ = ["ingest_pbmc_pipeline", "run_eda"]

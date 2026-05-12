@@ -58,6 +58,7 @@ kg:
   max_retries: 5
   cache_enabled: true
   max_genes_for_query: 500
+  prior_covariance_scale: 0.02
 evaluation:
   bootstrap_b: 50
   bootstrap_fraction: 0.8

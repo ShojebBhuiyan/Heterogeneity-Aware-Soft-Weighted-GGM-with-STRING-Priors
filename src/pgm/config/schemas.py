@@ -97,7 +97,8 @@ class KgConfig(BaseModel):
     max_retries: int = 5
     cache_enabled: bool = True
     max_genes_for_query: int = 500
-
+    #: Add ``scale * prior`` to weighted covariance before graphical lasso (uncertain heuristic).
+    prior_covariance_scale: float = 0.02
 
 class EvaluationConfig(BaseModel):
     bootstrap_b: int = 50
