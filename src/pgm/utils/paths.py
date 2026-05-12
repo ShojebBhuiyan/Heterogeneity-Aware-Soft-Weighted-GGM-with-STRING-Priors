@@ -19,6 +19,10 @@ def processed_dir(cfg: ProjectConfig) -> Path:
     return cfg.resolve(cfg.data.processed_dir)
 
 
+def processed_h5ad_path(cfg: ProjectConfig) -> Path:
+    return cfg.resolve(cfg.data.processed_dir) / cfg.preprocessing.output_filename
+
+
 def figures_dir(cfg: ProjectConfig) -> Path:
     return cfg.resolve(cfg.reports.figures_dir)
 

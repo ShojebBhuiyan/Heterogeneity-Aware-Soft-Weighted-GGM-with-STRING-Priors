@@ -65,6 +65,10 @@ class PreprocessingConfig(BaseModel):
     mitochondrial_prefix: str = r"^MT-"
     n_top_hvg: int = 2000
     n_pcs: int = 50
+    #: Optional cap for smoke / interactive runs (None = all cells).
+    smoke_max_cells: int | None = None
+    #: Output filename relative to ``data/processed``.
+    output_filename: str = "pbmc3k_processed.h5ad"
 
 
 class ClusteringConfig(BaseModel):
@@ -75,7 +79,6 @@ class ClusteringConfig(BaseModel):
     gmm_n_components: int = 8
     gmm_covariance_type: str = "full"
     gmm_pca_representation: str = "X_pca"
-
 
 class ModelsConfig(BaseModel):
     """Graphical model hyperparameters."""
@@ -99,6 +102,7 @@ class KgConfig(BaseModel):
     max_genes_for_query: int = 500
     #: Add ``scale * prior`` to weighted covariance before graphical lasso (uncertain heuristic).
     prior_covariance_scale: float = 0.02
+
 
 class EvaluationConfig(BaseModel):
     bootstrap_b: int = 50

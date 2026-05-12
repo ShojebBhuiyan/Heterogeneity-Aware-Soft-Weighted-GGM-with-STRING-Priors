@@ -17,5 +17,6 @@ evaluation:
 kg:
   max_genes_for_query: 50
 preprocessing:
+  smoke_max_cells: 450
   n_top_hvg: 100
   n_pcs: 20

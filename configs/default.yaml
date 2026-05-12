@@ -36,6 +36,7 @@ preprocessing:
   mitochondrial_prefix: "^MT-"
   n_top_hvg: 2000
   n_pcs: 50
+  output_filename: pbmc3k_processed.h5ad
 clustering:
   neighbor_n_neighbors: 15
   neighbor_n_pcs: 40
