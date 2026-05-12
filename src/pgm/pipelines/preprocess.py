@@ -33,13 +33,19 @@ def run_preprocess_pipeline(
     processed_dir(cfg).mkdir(parents=True, exist_ok=True)
 
     if not force and checkpoint_exists(cfg, checkpoint_name) and out.exists():
-        logger.info(
-            "Preprocess skip %.2fs (checkpoint)", time.perf_counter() - t0
-        )
-        return out
+        try:
+            chk = sc.read_h5ad(out)
+        except OSError:
+            chk = None
+        if chk is not None and "X_pca" in chk.obsm:
+            logger.info(
+                "Preprocess skip %.2fs (checkpoint)", time.perf_counter() - t0
+            )
+            return out
+        logger.warning("Preprocess checkpoint invalid — recomputing")
 
     adata = sc.read_h5ad(interim_h5ad)
-    preprocess_adata(adata, cfg, inplace=True)
+    adata = preprocess_adata(adata, cfg)
     ensure_parents(out)
     adata.write_h5ad(out)
     save_checkpoint(cfg, checkpoint_name, adata)

@@ -10,6 +10,7 @@ eda:
 clustering:
   gmm_n_components: 3
   neighbor_n_pcs: 20
+  gmm_covariance_type: diag
 models:
   gl_cv_folds: 3
 evaluation:
