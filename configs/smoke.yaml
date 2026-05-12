@@ -13,6 +13,8 @@ clustering:
   gmm_covariance_type: diag
 models:
   gl_cv_folds: 3
+  gl_alpha: 0.35
+  covariance_ridge: 0.025
 evaluation:
   bootstrap_b: 5
 kg:
