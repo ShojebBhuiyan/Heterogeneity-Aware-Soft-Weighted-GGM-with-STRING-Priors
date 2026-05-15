@@ -20,5 +20,6 @@ tenacity>=8.2
 requests>=2.31
 igraph>=0.11
 leidenalg>=0.10
+gglasso
 # Optional on Python>=3.14: pip install ydata-profiling or sweetviz manually if available
 pytest>=7.4
