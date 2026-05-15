@@ -42,22 +42,31 @@ def load_project_config(
     *,
     configs_dir: Path | None = None,
     smoke: bool | None = None,
+    preset: str | None = None,
     extra_overrides: Mapping[str, Any] | None = None,
 ) -> ProjectConfig:
     """
-    Load `default.yaml`; merge `smoke.yaml` when ``smoke`` or env ``SMOKE=1``.
+    Load `default.yaml`; optionally merge a preset YAML; merge `smoke.yaml` when
+    ``smoke`` or env ``SMOKE=1``.
 
     Parameters
     ----------
     configs_dir
         Directory containing default.yaml / smoke.yaml. Defaults to
         `<resolved_root>/configs` after first load pass.
+    preset
+        If set, deep-merge ``preset`` + ``.yaml`` from ``configs_dir`` after default
+        (for example ``preset="quick"`` loads ``quick.yaml``). When omitted, env
+        ``PGM_PRESET`` is used if set.
     extra_overrides
         Optional shallow/deep overrides (e.g. tests).
     """
     root_candidates = Path.cwd().resolve()
     smoke_env = os.environ.get("SMOKE", "").lower() in {"1", "true", "yes"}
     smoke = smoke if smoke is not None else smoke_env
+    if preset is None:
+        env_preset = os.environ.get("PGM_PRESET", "").strip()
+        preset = env_preset or None
 
     if configs_dir is None:
         configs_dir = _find_configs_dir(root_candidates)
@@ -65,6 +74,12 @@ def load_project_config(
     default_path = configs_dir / "default.yaml"
     smoke_path = configs_dir / "smoke.yaml"
     merged = _load_yaml(default_path)
+    if preset:
+        preset_path = configs_dir / f"{preset}.yaml"
+        if preset_path.is_file():
+            merged = deep_merge_dicts(merged, _load_yaml(preset_path))
+        else:
+            raise FileNotFoundError(f"Config preset not found: {preset_path}")
     if smoke and smoke_path.is_file():
         merged = deep_merge_dicts(merged, _load_yaml(smoke_path))
 
@@ -97,9 +112,13 @@ def load_config(
     *,
     configs_dir: Path | None = None,
     smoke: bool | None = None,
+    preset: str | None = None,
     extra_overrides: Mapping[str, Any] | None = None,
 ) -> ProjectConfig:
     """Alias for :func:`load_project_config` (notebook-friendly name)."""
     return load_project_config(
-        configs_dir=configs_dir, smoke=smoke, extra_overrides=extra_overrides
+        configs_dir=configs_dir,
+        smoke=smoke,
+        preset=preset,
+        extra_overrides=extra_overrides,
     )

@@ -29,23 +29,50 @@ def fit_soft_component_graphs(
     X = expression_dense(adata)
     K = W.shape[1]
     ridge = cfg.models.covariance_ridge
+    shrink = cfg.models.covariance_shrinkage
     t_run = time.perf_counter()
     ent = float(-(W * np.log(W + 1e-12)).sum(axis=1).mean())
+    banner = (
+        f"[Soft GGM] fit_soft_component_graphs: K={K} matrix={X.shape[0]}x{X.shape[1]} "
+        f"mean_assignment_entropy={ent:.4f} gl_mode={cfg.models.gl_mode!r} "
+        f"gl_alpha={cfg.models.gl_alpha} ridge={ridge:.2e} shrinkage={shrink:.3f}"
+    )
+    print(banner, flush=True)
     logger.info(
-        "fit_soft_component_graphs start K=%d X.shape=%s mean_row_entropy=%.4f ridge=%.2e",
+        "fit_soft_component_graphs start K=%d X.shape=%s mean_row_entropy=%.4f "
+        "gl_mode=%s gl_alpha=%s ridge=%.2e shrinkage=%.4f retry_mults=%s",
         K,
         X.shape,
         ent,
+        cfg.models.gl_mode,
+        cfg.models.gl_alpha,
         ridge,
+        shrink,
+        list(cfg.models.gl_alpha_retry_multipliers),
     )
     out = []
     for k in range(K):
         t_k = time.perf_counter()
         lbl = f"soft_k={k}"
-        weights = np.clip(W[:, k], 5e-3, None)
+        raw_col = np.asarray(W[:, k], dtype=np.float64)
+        n_clip = int(np.sum(raw_col < 5e-3))
+        weights = np.clip(raw_col, 5e-3, None)
+        ws = float(weights.sum())
+        w_norm = weights / ws
+        ess = float(1.0 / np.dot(w_norm, w_norm)) if ws > 0 else 0.0
+        step_msg = (
+            f"[Soft GGM] component {k + 1}/{K}: "
+            "weighted scatter -> stabilize covariance -> graphical lasso "
+            f"(mode={cfg.models.gl_mode!r}, ess≈{ess:.1f} cells, "
+            f"weights clipped at floor for {n_clip}/{len(weights)} cells)"
+        )
+        print(step_msg, flush=True)
+        logger.info("%s", step_msg)
         try:
-            emp = weighted_scatter_cov(X, weights, ridge=ridge, log_label=lbl)
-            theta = graphical_lasso_from_covariance(emp, cfg, log_label=lbl)
+            emp = weighted_scatter_cov(X, weights, log_label=lbl)
+            theta = graphical_lasso_from_covariance(
+                emp, cfg, log_label=lbl, effective_n=ess
+            )
         except Exception as e:
             logger.error("Soft GGM component %d failed (%s)", k, e)
             raise

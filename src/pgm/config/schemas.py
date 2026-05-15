@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 
 class PathsConfig(BaseModel):
@@ -66,6 +66,9 @@ class PreprocessingConfig(BaseModel):
     mitochondrial_prefix: str = r"^MT-"
     n_top_hvg: int = 2000
     n_pcs: int = 50
+    #: Subsample to at most this many cells after load (None = use all). Applies even when
+    #: smoke mode is off; use for faster dev runs without tightening EDA / PCA smoke behavior.
+    max_cells: int | None = None
     #: Optional cap for smoke / interactive runs (None = all cells).
     smoke_max_cells: int | None = None
     #: Output filename relative to ``data/processed``.
@@ -81,16 +84,83 @@ class ClusteringConfig(BaseModel):
     gmm_covariance_type: str = "full"
     gmm_pca_representation: str = "X_pca"
 
+
 class ModelsConfig(BaseModel):
     """Graphical model hyperparameters."""
 
+    #: ``sklearn`` = Friedman coordinate descent / LARS on covariance; ``gglasso`` = ADMM SGL solvers.
+    gl_backend: Literal["sklearn", "gglasso"] = "sklearn"
+    #: Which ``gglasso`` single-graphical-lasso routine to call when ``gl_backend='gglasso'``.
+    gglasso_solver: Literal["block_sgl", "admm_sgl"] = "block_sgl"
+    #: ADMM dual residual tolerance (gglasso); forwarded to ``block_SGL`` / ``ADMM_SGL``.
+    gglasso_rtol: float = 1e-4
+    #: ADMM augmented Lagrangian step ``rho`` (gglasso).
+    gglasso_rho: float = 1.0
+    #: Whether gglasso updates ``rho`` inside ADMM (Boyd-style).
+    gglasso_update_rho: bool = True
+
     gl_alpha: float | None = None
+    #: sklearn ``graphical_lasso(..., mode=...)`` for covariance fits; ``cd`` is usually more stable than ``lars``.
+    gl_mode: Literal["cd", "lars"] = "cd"
+    #: Multiply ``gl_alpha`` (or heuristic default) by each factor until a solve succeeds.
+    gl_alpha_retry_multipliers: list[float] = Field(
+        default_factory=lambda: [1.0, 2.0, 4.0, 8.0]
+    )
+    #: Convex shrink toward scaled identity: ``(1-s)Σ + s·(tr(Σ)/p)I`` before ridge; ``0`` disables.
+    covariance_shrinkage: float = 0.1
+    #: When ``effective_n`` (e.g. mixture ESS) is passed to covariance GLasso, enforce
+    #: ``α ≥ scale · p / max(effective_n, 1)`` so fits with large ``p`` relative to ESS are
+    #: not attempted with tiny ``α``. ``0`` disables.
+    gl_soft_ess_min_alpha_scale: float = 0.05
     gl_cv_folds: int = 5
     gl_max_iter: int = 200
     gl_tol: float = 1e-3
     adjacency_tol: float = 1e-4
     ledoitwolf_shrink: bool = True
-    covariance_ridge: float = 1e-6
+    covariance_ridge: float = 1e-4
+    #: Log a warning after each solve attempt if wall time exceeds this (seconds); ``None`` disables.
+    gl_attempt_warn_seconds: float | None = 60.0
+
+    @field_validator("gl_alpha_retry_multipliers")
+    @classmethod
+    def _positive_multipliers(cls, v: list[float]) -> list[float]:
+        if not v:
+            raise ValueError("gl_alpha_retry_multipliers must be non-empty")
+        if any(float(m) <= 0 for m in v):
+            raise ValueError("gl_alpha_retry_multipliers must be positive")
+        return [float(m) for m in v]
+
+    @field_validator("covariance_shrinkage")
+    @classmethod
+    def _shrink_bounds(cls, v: float) -> float:
+        fv = float(v)
+        if not 0.0 <= fv <= 1.0:
+            raise ValueError("covariance_shrinkage must be in [0, 1]")
+        return fv
+
+    @field_validator("gl_soft_ess_min_alpha_scale")
+    @classmethod
+    def _ess_alpha_scale_nonneg(cls, v: float) -> float:
+        fv = float(v)
+        if fv < 0.0:
+            raise ValueError("gl_soft_ess_min_alpha_scale must be >= 0")
+        return fv
+
+    @field_validator("gglasso_rtol")
+    @classmethod
+    def _gglasso_rtol_positive(cls, v: float) -> float:
+        fv = float(v)
+        if fv <= 0.0:
+            raise ValueError("gglasso_rtol must be positive")
+        return fv
+
+    @field_validator("gglasso_rho")
+    @classmethod
+    def _gglasso_rho_positive(cls, v: float) -> float:
+        fv = float(v)
+        if fv <= 0.0:
+            raise ValueError("gglasso_rho must be positive")
+        return fv
 
 
 class KgConfig(BaseModel):

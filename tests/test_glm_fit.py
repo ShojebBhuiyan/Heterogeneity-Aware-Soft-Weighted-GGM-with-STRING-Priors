@@ -36,3 +36,63 @@ def test_fit_graphical_lasso_from_samples_fixed_alpha():
     assert model is None
     assert theta.shape == (18, 18)
     assert np.isfinite(theta).all()
+
+
+def test_graphical_lasso_from_covariance_ess_alpha_floor():
+    """Low ESS should raise alpha floor so GLasso does not use a too-small alpha."""
+    from sklearn.covariance import empirical_covariance
+
+    from pgm.models.glm_utils import graphical_lasso_from_covariance
+
+    cfg = ProjectConfig()
+    cfg.models.gl_alpha = 0.02
+    cfg.models.gl_soft_ess_min_alpha_scale = 0.05
+    rng = np.random.default_rng(2)
+    n, p = 120, 35
+    X = rng.standard_normal((n, p))
+    emp = empirical_covariance(X, assume_centered=False)
+    theta = graphical_lasso_from_covariance(emp, cfg, effective_n=5.0)
+    assert theta.shape == (p, p)
+    assert np.isfinite(theta).all()
+
+
+def test_graphical_lasso_from_covariance_gglasso_block_sgl():
+    """gglasso ADMM block path returns finite precision on near-collinear data."""
+    from sklearn.covariance import empirical_covariance
+
+    from pgm.models.glm_utils import graphical_lasso_from_covariance
+
+    rng = np.random.default_rng(11)
+    n, p = 120, 28
+    X = rng.standard_normal((n, p))
+    X[:, 1:] = X[:, :1] + 1e-4 * rng.standard_normal((n, p - 1))
+    emp = empirical_covariance(X, assume_centered=False)
+
+    cfg = ProjectConfig()
+    cfg.models.gl_backend = "gglasso"
+    cfg.models.gglasso_solver = "block_sgl"
+    cfg.models.gl_alpha = 0.35
+
+    theta = graphical_lasso_from_covariance(emp, cfg)
+    assert theta.shape == (p, p)
+    assert np.isfinite(theta).all()
+
+
+def test_graphical_lasso_from_covariance_gglasso_admm_sgl():
+    from sklearn.covariance import empirical_covariance
+
+    from pgm.models.glm_utils import graphical_lasso_from_covariance
+
+    rng = np.random.default_rng(13)
+    n, p = 100, 15
+    X = rng.standard_normal((n, p))
+    emp = empirical_covariance(X, assume_centered=False)
+
+    cfg = ProjectConfig()
+    cfg.models.gl_backend = "gglasso"
+    cfg.models.gglasso_solver = "admm_sgl"
+    cfg.models.gl_alpha = 0.25
+
+    theta = graphical_lasso_from_covariance(emp, cfg)
+    assert theta.shape == (p, p)
+    assert np.isfinite(theta).all()

@@ -46,11 +46,23 @@ clustering:
   gmm_covariance_type: full
   gmm_pca_representation: X_pca
 models:
-  gl_alpha: null
+  gl_backend: sklearn
+  gglasso_solver: block_sgl
+  gglasso_rtol: 1.0e-4
+  gglasso_rho: 1.0
+  gglasso_update_rho: true
+  gl_alpha: 0.25
+  gl_mode: cd
+  gl_alpha_retry_multipliers: [1.0, 2.0, 4.0, 8.0]
+  covariance_shrinkage: 0.1
+  # Raise α when p >> mixture effective sample size (soft / KG weighted GLasso).
+  gl_soft_ess_min_alpha_scale: 0.05
   gl_cv_folds: 3
   gl_max_iter: 200
   gl_tol: 0.001
   adjacency_tol: 1e-4
+  covariance_ridge: 1.0e-4
+  gl_attempt_warn_seconds: 60
 kg:
   species_id: 9606
   confidence_threshold: 0.7

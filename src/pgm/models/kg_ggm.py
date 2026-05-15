@@ -49,9 +49,14 @@ def fit_kg_soft_graphs(
         t_k = time.perf_counter()
         lbl = f"kg_k={k}"
         wt = np.clip(W[:, k], 5e-3, None)
-        emp = weighted_scatter_cov(X, wt, ridge=ridge, log_label=lbl)
+        ws = float(wt.sum())
+        w_norm = wt / ws if ws > 0 else wt
+        ess = float(1.0 / np.dot(w_norm, w_norm)) if ws > 0 else 0.0
+        emp = weighted_scatter_cov(X, wt, log_label=lbl)
         emp_blend = emp + scales * np.asarray(prior_mat, dtype=np.float64)
-        theta = graphical_lasso_from_covariance(emp_blend, cfg, log_label=lbl)
+        theta = graphical_lasso_from_covariance(
+            emp_blend, cfg, log_label=lbl, effective_n=ess
+        )
         adj = precision_to_binary_adj(theta, cfg.models.adjacency_tol)
         tri = adj[np.triu_indices_from(adj, k=1)]
         logger.info(

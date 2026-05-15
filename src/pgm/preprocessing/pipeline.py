@@ -29,12 +29,17 @@ def preprocess_adata(
     if not inplace:
         adata = adata.copy()
 
-    if cfg.preprocessing.smoke_max_cells is not None and is_smoke(cfg):
-        ncap = min(cfg.preprocessing.smoke_max_cells, adata.n_obs)
+    n_obs0 = int(adata.n_obs)
+    cap: int | None = None
+    if cfg.preprocessing.max_cells is not None:
+        cap = min(int(cfg.preprocessing.max_cells), n_obs0)
+    elif cfg.preprocessing.smoke_max_cells is not None and is_smoke(cfg):
+        cap = min(int(cfg.preprocessing.smoke_max_cells), n_obs0)
+    if cap is not None and cap < n_obs0:
         rng = np.random.default_rng(cfg.run.random_seed)
-        idx = rng.choice(adata.n_obs, ncap, replace=False)
+        idx = rng.choice(n_obs0, cap, replace=False)
         adata = adata[idx].copy()
-        logger.info("Smoke cap: using %d cells", ncap)
+        logger.info("Subsampled cells: %d of %d", cap, n_obs0)
 
     pat = cfg.preprocessing.mitochondrial_prefix
     adata.var["mt"] = adata.var_names.str.match(pat, case=False, flags=re.IGNORECASE)

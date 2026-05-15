@@ -1,0 +1,33 @@
+# Mid-scale preset: faster than full default, richer than smoke (450 cells).
+# Use: load_config(smoke=False, preset="quick") or set env PGM_PRESET=quick
+paths: {}
+reports: {}
+checkpoint:
+  subdirectory: quick
+eda:
+  n_cells_profiling_hint: 1600
+clustering:
+  # Fewer states than default(8) so tail components keep usable ESS for weighted GLasso.
+  gmm_n_components: 5
+  neighbor_n_pcs: 32
+  gmm_covariance_type: full
+models:
+  gl_backend: gglasso
+  gglasso_solver: block_sgl
+  gl_cv_folds: 3
+  # Soft GGM: weighted scatter with low ESS × high p needs strong SPD stabilization + α.
+  gl_alpha: 0.35
+  gl_soft_ess_min_alpha_scale: 0.1
+  covariance_shrinkage: 0.22
+  covariance_ridge: 0.02
+  gl_max_iter: 2500
+  gl_alpha_retry_multipliers: [1.0, 2.0, 4.0, 8.0, 16.0]
+evaluation:
+  bootstrap_b: 24
+kg:
+  max_genes_for_query: 200
+preprocessing:
+  max_cells: 1600
+  n_top_hvg: 700
+  n_pcs: 36
+  output_filename: pbmc3k_processed_quick.h5ad

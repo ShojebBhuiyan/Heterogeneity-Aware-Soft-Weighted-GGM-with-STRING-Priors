@@ -1,12 +1,10 @@
-"""Logging setup with Rich console and rotating file."""
+"""Logging setup with rotating file and stdout (notebook-friendly)."""
 
 from __future__ import annotations
 
 import logging
 import sys
 from logging.handlers import RotatingFileHandler
-
-from rich.logging import RichHandler
 
 from pgm.utils.paths import ensure_parents
 
@@ -36,9 +34,10 @@ def configure_logging(logger_name: str, cfg) -> logging.Logger:
     )
 
     if cfg.logging.console:
-        rich = RichHandler(rich_tracebacks=True, markup=True)
-        rich.setLevel(log.level)
-        log.addHandler(rich)
+        sh = logging.StreamHandler(sys.stdout)
+        sh.setLevel(log.level)
+        sh.setFormatter(fmt)
+        log.addHandler(sh)
     log_dir = cfg.resolve(cfg.logging.log_dir)
     ensure_parents(log_dir / "pgm.log")
     fh = RotatingFileHandler(

@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from pgm.config.loader import deep_merge_dicts, load_project_config
 from pgm.config.schemas import ProjectConfig
@@ -34,6 +35,24 @@ def test_load_config_smoke_flag(tmp_path):
     assert cfg.run.random_seed == 7
 
 
+def test_load_config_preset_merge(tmp_path):
+    cfg_dir = tmp_path / "configs"
+    cfg_dir.mkdir()
+    (cfg_dir / "default.yaml").write_text(
+        "preprocessing:\n  n_pcs: 50\n  n_top_hvg: 2000\n",
+        encoding="utf-8",
+    )
+    (cfg_dir / "quick.yaml").write_text(
+        "preprocessing:\n  n_pcs: 10\n  max_cells: 99\n",
+        encoding="utf-8",
+    )
+    cfg = load_project_config(configs_dir=cfg_dir, smoke=False, preset="quick")
+    assert cfg.smoke_mode.enabled is False
+    assert cfg.preprocessing.n_pcs == 10
+    assert cfg.preprocessing.n_top_hvg == 2000
+    assert cfg.preprocessing.max_cells == 99
+
+
 def test_resolve_paths(tmp_path: Path):
     cfg = ProjectConfig.model_validate({"paths": {"project_root": str(tmp_path)}})
     out = cfg.resolve(Path("relative/sub"))
@@ -53,6 +72,20 @@ def test_checkpoint_roundtrip_numpy(tmp_path: Path):
     loaded = load_checkpoint(cfg, "trial")
     assert "arr" in loaded
     assert np.allclose(loaded["arr"], x["arr"])
+
+
+def test_models_config_invalid_gl_backend(tmp_path: Path):
+    with pytest.raises(ValidationError):
+        ProjectConfig.model_validate(
+            {"paths": {"project_root": str(tmp_path)}, "models": {"gl_backend": "torch"}},
+        )
+
+
+def test_models_config_invalid_gglasso_solver(tmp_path: Path):
+    with pytest.raises(ValidationError):
+        ProjectConfig.model_validate(
+            {"paths": {"project_root": str(tmp_path)}, "models": {"gglasso_solver": "warm_ppdna"}},
+        )
 
 
 def test_seed_determinism(tmp_path: Path):
