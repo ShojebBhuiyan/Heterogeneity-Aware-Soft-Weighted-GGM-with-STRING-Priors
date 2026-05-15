@@ -69,9 +69,22 @@ def preprocess_adata(
     if sparse.issparse(adata.X):
         adata.X = np.asarray(adata.X.todense(), dtype=np.float32)
     sc.pp.scale(adata, max_value=10, zero_center=True)
-    nhv = int(adata.var["highly_variable"].sum())
+    Xs = np.asarray(adata.X)
+    np.nan_to_num(Xs, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
+    with np.errstate(invalid="ignore"):
+        col_std = Xs.std(axis=0, ddof=1)
+    bad_gene = ~np.isfinite(col_std) | (col_std <= 1e-12)
+    n_bad = int(bad_gene.sum())
+    if n_bad:
+        logger.warning(
+            "After scale, dropping %d zero-variance / invalid genes (required for stable PCA/GLasso)",
+            n_bad,
+        )
+        adata = adata[:, ~bad_gene].copy()
+        Xs = np.asarray(adata.X)
+    nhv = adata.n_vars
     if nhv < 3:
-        raise ValueError(f"Too few highly variable genes: {nhv}")
+        raise ValueError(f"Too few genes after QC and variance filter: {nhv}")
     n_pcs = max(5, min(cfg.preprocessing.n_pcs, nhv - 1))
     if is_smoke(cfg):
         n_pcs = min(n_pcs, 20)

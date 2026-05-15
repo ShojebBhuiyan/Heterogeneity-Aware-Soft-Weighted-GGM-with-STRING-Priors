@@ -1,5 +1,5 @@
 paths:
-  project_root: null  # defaults to cwd or repo detection
+  project_root: null # defaults to cwd or repo detection
 data:
   tenx_mtx_dir: datasets/filtered_gene_bc_matrices/hg19
   interim_dir: data/interim

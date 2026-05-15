@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 import numpy as np
 
@@ -33,13 +34,32 @@ def fit_kg_soft_graphs(
 
     scales = cfg.kg.prior_covariance_scale
     ridge = cfg.models.covariance_ridge
+    K = W.shape[1]
+    t_run = time.perf_counter()
+    logger.info(
+        "fit_kg_soft_graphs start K=%d genes=%d prior_scale=%.4f ridge=%.2e X.shape=%s",
+        K,
+        genes.size,
+        scales,
+        ridge,
+        X.shape,
+    )
     out_l: list[dict] = []
-    for k in range(W.shape[1]):
+    for k in range(K):
+        t_k = time.perf_counter()
+        lbl = f"kg_k={k}"
         wt = np.clip(W[:, k], 5e-3, None)
-        emp = weighted_scatter_cov(X, wt, ridge=ridge)
+        emp = weighted_scatter_cov(X, wt, ridge=ridge, log_label=lbl)
         emp_blend = emp + scales * np.asarray(prior_mat, dtype=np.float64)
-        theta = graphical_lasso_from_covariance(emp_blend, cfg)
+        theta = graphical_lasso_from_covariance(emp_blend, cfg, log_label=lbl)
         adj = precision_to_binary_adj(theta, cfg.models.adjacency_tol)
+        tri = adj[np.triu_indices_from(adj, k=1)]
+        logger.info(
+            "[%s] KG component wall=%.3fs triu_density=%.5f",
+            lbl,
+            time.perf_counter() - t_k,
+            float(tri.mean()) if tri.size else 0.0,
+        )
         out_l.append(
             {
                 "k": k,
@@ -50,10 +70,11 @@ def fit_kg_soft_graphs(
             }
         )
     logger.info(
-        "KG soft GGM blended %d states (λ=%.4f, genes=%d)",
+        "KG soft GGM blended %d states (λ=%.4f, genes=%d) total %.3fs",
         W.shape[1],
         scales,
         genes.size,
+        time.perf_counter() - t_run,
     )
     return out_l
 

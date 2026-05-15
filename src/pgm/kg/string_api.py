@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import time
 from io import StringIO
 
 import pandas as pd
@@ -54,12 +55,19 @@ class StringAPIClient:
         Parses ``preferredName_A/B`` and ``score`` (normalized to [0,1]).
         """
         uniq = sorted({str(s).strip() for s in identifiers if str(s).strip()})
+        t_net = time.perf_counter()
         if self.cfg.kg.cache_enabled:
             ck = cache_key(uniq, self.cfg)
             cpath = self.cache_dir / f"{ck}_network.parquet"
             if cpath.is_file():
-                logger.info("STRING cache hit %s", cpath.name)
-                return pd.read_parquet(cpath)
+                df_hit = pd.read_parquet(cpath)
+                logger.info(
+                    "STRING cache hit %s rows=%d %.3fs",
+                    cpath.name,
+                    len(df_hit),
+                    time.perf_counter() - t_net,
+                )
+                return df_hit
 
         max_g = min(len(uniq), self.cfg.kg.max_genes_for_query)
         if len(uniq) > max_g:
@@ -68,6 +76,13 @@ class StringAPIClient:
             )
             uniq = uniq[:max_g]
 
+        logger.info(
+            "STRING network request start genes=%d batch_size=%d required_score=%d cache_write=%s",
+            len(uniq),
+            max(5, min(self.cfg.kg.batch_size, 420)),
+            int(round(self.cfg.kg.confidence_threshold * 1000)),
+            self.cfg.kg.cache_enabled,
+        )
         parts: list[pd.DataFrame] = []
         bs = max(5, min(self.cfg.kg.batch_size, 420))
         required = int(round(self.cfg.kg.confidence_threshold * 1000))
@@ -109,6 +124,12 @@ class StringAPIClient:
             cpath = self.cache_dir / f"{ck}_network.parquet"
             frame.to_parquet(cpath)
             logger.info("Wrote STRING cache %s", cpath)
+        logger.info(
+            "STRING fetch done %.3fs rows=%d n_batches=%d",
+            time.perf_counter() - t_net,
+            len(frame),
+            int((len(uniq) + bs - 1) // bs) if uniq else 0,
+        )
         return frame
 
 

@@ -22,14 +22,15 @@ def fit_global_graphical_lasso(adata, cfg: ProjectConfig) -> dict:
     logger.info(
         "Global GGM fitting on X shape %s alpha=%s", X.shape, cfg.models.gl_alpha
     )
-    model, theta = fit_graphical_lasso_from_samples(X, cfg)
+    model, theta = fit_graphical_lasso_from_samples(X, cfg, log_label="global_ggm")
     adj = precision_to_binary_adj(theta, cfg.models.adjacency_tol)
     genes = np.array(adata.var_names)
     triu_edges = int(adj[np.triu_indices_from(adj, k=1)].sum())
     logger.info(
-        "Global GGM precision cond=%s edges=%d",
-        f"{np.linalg.cond(theta):.2e}",
+        "Global GGM summary edges=%d tr(precision)=%.4e ||precision||_F=%.4e",
         triu_edges,
+        float(np.trace(theta)),
+        float(np.linalg.norm(theta, ord="fro")),
     )
     return {
         "model": model,

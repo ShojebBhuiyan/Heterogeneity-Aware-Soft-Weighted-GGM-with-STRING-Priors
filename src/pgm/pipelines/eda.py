@@ -66,7 +66,11 @@ def run_eda(
     apply_publication_theme()
     fig_tot, ax_tot = plt.subplots(figsize=(5, 3.2))
     sns.histplot(Tot, bins=60, ax=ax_tot)
-    ax_tot.set_xlabel("UMI counts per cell")
+    ax_tot.set_xlabel(
+        "Sum of X per cell (scaled processed)"
+        if "X_pca" in adata.obsm
+        else "UMI counts per cell"
+    )
     save_dual_format(fig_tot, fig_dir / "total_counts_hist")
     plt.close(fig_tot)
 
@@ -80,14 +84,19 @@ def run_eda(
     save_dual_format(fig_h, fig_dir / "sparsity_snippet")
     plt.close(fig_h)
 
-    sc.pp.normalize_total(adata, target_sum=1e4)
-    sc.pp.log1p(adata)
-    n_comp = min(25, max(adata.n_vars // 10, 2)) if is_smoke(cfg) else min(
-        50, max(adata.n_vars // 10, 2)
-    )
     n_neighbors = max(5, min(cfg.eda.umap_neighbors, 10 if is_smoke(cfg) else 15))
-    sc.pp.pca(adata, n_comps=n_comp)
-    sc.pp.neighbors(adata, n_neighbors=n_neighbors, use_rep="X_pca")
+    # Processed AnnData from ``preprocess_adata`` is already normalized, log1p, scaled, PCA'd.
+    if "X_pca" in adata.obsm:
+        logger.info("EDA: using existing X_pca from processed AnnData (skip re-normalize/log1p)")
+        sc.pp.neighbors(adata, n_neighbors=n_neighbors, use_rep="X_pca")
+    else:
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+        n_comp = min(25, max(adata.n_vars // 10, 2)) if is_smoke(cfg) else min(
+            50, max(adata.n_vars // 10, 2)
+        )
+        sc.pp.pca(adata, n_comps=n_comp)
+        sc.pp.neighbors(adata, n_neighbors=n_neighbors, use_rep="X_pca")
     sc.tl.umap(adata, min_dist=cfg.eda.umap_min_dist)
     fig_um, ax_um = plt.subplots(figsize=(5.5, 4.8))
     sc.pl.umap(adata, ax=ax_um, show=False)
@@ -114,13 +123,16 @@ def run_eda(
             encoding="utf-8",
         )
 
-    tot_log = np.asarray(adata.X.sum(axis=1)).ravel().mean()
+    x_mean = float(np.asarray(adata.X.mean(axis=0)).mean())
     summary_lines = [
         "# EDA summary",
         "",
         f"- cells (used): {adata.n_obs}",
         f"- genes: {adata.n_vars}",
-        f"- mean log1p count sum: {tot_log:.3f}",
+        "- used existing `X_pca` from processed object"
+        if "X_pca" in adata.obsm
+        else "- ran normalize_total + log1p + PCA on raw interim-style input",
+        f"- mean of gene means (current X): {x_mean:.6g}",
         "",
         "Artifacts: `reports/figures/eda/`, HTML `reports/eda/profile_report.html`.",
     ]

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import joblib
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import scanpy as sc
 
@@ -42,16 +43,38 @@ def run_kg_pipeline(
     outp = checkpoints_dir(cfg) / bundle_name
     ensure_parents(outp)
     if not force and outp.exists():
-        logger.info("KG pipeline skip %.2fs", time.perf_counter() - t0)
+        logger.info("KG pipeline skip (checkpoint exists) %.2fs → %s", time.perf_counter() - t0, outp)
         return outp
 
+    logger.info("KG pipeline loading AnnData %s", clustered_h5ad.resolve())
+    t_read = time.perf_counter()
     adata = sc.read_h5ad(clustered_h5ad)
+    logger.info("KG AnnData read %.3fs shape=%s", time.perf_counter() - t_read, adata.shape)
     genes = list(adata.var_names.astype(str))
+
+    t_str = time.perf_counter()
     edges = fetch_string_for_genes(genes, cfg)
+    logger.info(
+        "KG STRING edges %.3fs rows=%d cols=%s",
+        time.perf_counter() - t_str,
+        len(edges),
+        list(edges.columns) if not edges.empty else [],
+    )
+
+    t_pr = time.perf_counter()
     prior = edges_to_sparse_prior(
         edges, genes, cfg.kg.confidence_threshold
     )
+    logger.info(
+        "KG prior matrix %.3fs shape=%s offdiag_nnz=%d",
+        time.perf_counter() - t_pr,
+        prior.shape,
+        int(np.count_nonzero(np.triu(prior, k=1))),
+    )
+
+    t_fit = time.perf_counter()
     kg_res = fit_kg_soft_graphs(adata, prior, cfg)
+    logger.info("KG fit_kg_soft_graphs %.3fs", time.perf_counter() - t_fit)
 
     fig_dir = figures_dir(cfg) / "kg"
     fig_dir.mkdir(parents=True, exist_ok=True)
@@ -63,10 +86,14 @@ def run_kg_pipeline(
         save_dual_format(fig_h, fig_dir / "string_score_hist")
         plt.close(fig_h)
 
+    t_dump = time.perf_counter()
     joblib.dump({"edges": edges, "prior": prior, "kg_results": kg_res}, outp, compress=3)
+    logger.info("KG joblib.dump → %s %.3fs", outp, time.perf_counter() - t_dump)
     pq = results_reports_dir(cfg) / "string_edges.parquet"
     ensure_parents(pq)
+    t_pq = time.perf_counter()
     edges.to_parquet(pq)
-    logger.info("KG pipeline done %.2fs", time.perf_counter() - t0)
+    logger.info("KG edges.to_parquet %.3fs → %s", time.perf_counter() - t_pq, pq)
+    logger.info("KG pipeline total %.3fs", time.perf_counter() - t0)
     return outp
 

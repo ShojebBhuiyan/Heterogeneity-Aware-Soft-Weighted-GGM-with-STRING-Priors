@@ -35,11 +35,21 @@ def run_soft_weighted_ggm_pipeline(
     outp = checkpoints_dir(cfg) / bundle_name
     ensure_parents(outp)
     if not force and outp.exists():
-        logger.info("Soft GGM skip %.2fs", time.perf_counter() - t0)
+        logger.info("Soft GGM skip (checkpoint exists) %.2fs → %s", time.perf_counter() - t0, outp)
         return outp
 
+    logger.info("Soft GGM loading AnnData %s", clustered_h5ad.resolve())
+    t_read = time.perf_counter()
     adata = sc.read_h5ad(clustered_h5ad)
+    logger.info(
+        "Soft GGM AnnData read %.3fs shape=%s obsm_keys=%s",
+        time.perf_counter() - t_read,
+        adata.shape,
+        list(adata.obsm.keys()),
+    )
+    t_fit = time.perf_counter()
     comps = fit_soft_component_graphs(adata, cfg)
+    logger.info("Soft GGM fit_soft_component_graphs %.3fs", time.perf_counter() - t_fit)
     fig_dir = figures_dir(cfg) / "ggm"
     fig_dir.mkdir(parents=True, exist_ok=True)
     apply_publication_theme()
@@ -57,7 +67,14 @@ def run_soft_weighted_ggm_pipeline(
     save_dual_format(fig_o, fig_dir / "soft_density")
     plt.close(fig_o)
 
+    t_dump = time.perf_counter()
     joblib.dump(comps, outp, compress=3)
-    logger.info("Soft weighted GGM done %.2fs", time.perf_counter() - t0)
+    logger.info(
+        "Soft GGM joblib.dump %.3fs → %s (%d components)",
+        time.perf_counter() - t_dump,
+        outp,
+        len(comps),
+    )
+    logger.info("Soft weighted GGM pipeline total %.3fs", time.perf_counter() - t0)
     return outp
 
