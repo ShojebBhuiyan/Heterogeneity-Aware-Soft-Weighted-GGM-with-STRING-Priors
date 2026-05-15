@@ -27,11 +27,8 @@ def _sanitize(name: str) -> str:
 
 
 def _checkpoint_subdir(cfg: ProjectConfig) -> Path:
-    sub = checkpoints_dir(cfg)
-    extra = (cfg.checkpoint.subdirectory or "").strip()
-    if extra:
-        sub = sub / extra
-    return sub
+    """Same resolved dir as ``pgm.utils.paths.checkpoints_dir`` (subdir-aware)."""
+    return checkpoints_dir(cfg)
 
 
 def _base_path(cfg: ProjectConfig, name: str, ext: str) -> Path:

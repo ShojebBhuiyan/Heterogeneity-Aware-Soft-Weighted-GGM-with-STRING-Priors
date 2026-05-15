@@ -1,0 +1,25 @@
+# Full-cell tuning preset: 300 HVGs.
+checkpoint:
+  subdirectory: tuning/hvg300
+preprocessing:
+  n_top_hvg: 300
+  n_pcs: 35
+  output_filename: pbmc3k_tuning_hvg300.h5ad
+clustering:
+  neighbor_n_pcs: 35
+kg:
+  max_genes_for_query: 300
+evaluation:
+  metrics_csv: tuning/runs/hvg300_metrics.csv
+  bootstrap_b: 24
+  bootstrap_soft_component: 0
+models:
+  gl_backend: gglasso
+  gglasso_solver: block_sgl
+  gl_cv_folds: 3
+  gl_alpha: 0.08
+  gl_soft_ess_min_alpha_scale: 0.01
+  covariance_shrinkage: 0.1
+  covariance_ridge: 1.0e-4
+  gl_max_iter: 2500
+  gl_alpha_retry_multipliers: [1.0, 2.0, 4.0, 8.0, 16.0]

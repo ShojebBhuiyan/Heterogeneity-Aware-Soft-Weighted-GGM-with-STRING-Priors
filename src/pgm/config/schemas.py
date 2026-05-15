@@ -178,6 +178,10 @@ class KgConfig(BaseModel):
 class EvaluationConfig(BaseModel):
     bootstrap_b: int = 50
     bootstrap_fraction: float = 0.8
+    #: Output CSV basename under ``reports/results`` (parents created as needed).
+    metrics_csv: str = "metrics_summary.csv"
+    #: If set, bootstrap stability for soft GMM component ``k`` (weighted covariance GLasso).
+    bootstrap_soft_component: int | None = None
 
 
 class SmokeFlag(BaseModel):

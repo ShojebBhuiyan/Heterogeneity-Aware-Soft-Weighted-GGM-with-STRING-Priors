@@ -1,0 +1,29 @@
+# First-pass tuning preset from parameter tuning plan (conservative baseline).
+checkpoint:
+  subdirectory: tuning/recommended
+preprocessing:
+  n_top_hvg: 300
+  n_pcs: 35
+  output_filename: pbmc3k_tuning_recommended.h5ad
+clustering:
+  neighbor_n_pcs: 35
+  gmm_n_components: 4
+  gmm_covariance_type: diag
+kg:
+  max_genes_for_query: 300
+  confidence_threshold: 0.5
+  prior_covariance_scale: 0.1
+evaluation:
+  metrics_csv: tuning/runs/recommended_metrics.csv
+  bootstrap_b: 24
+  bootstrap_soft_component: 0
+models:
+  gl_backend: gglasso
+  gglasso_solver: block_sgl
+  gl_cv_folds: 3
+  gl_alpha: 0.08
+  gl_soft_ess_min_alpha_scale: 0.01
+  covariance_shrinkage: 0.1
+  covariance_ridge: 1.0e-4
+  gl_max_iter: 2500
+  gl_alpha_retry_multipliers: [1.0, 2.0, 4.0, 8.0, 16.0]

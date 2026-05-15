@@ -8,7 +8,10 @@ from pgm.config.schemas import ProjectConfig
 
 
 def checkpoints_dir(cfg: ProjectConfig) -> Path:
-    return cfg.resolve(cfg.data.checkpoint_dir)
+    """Resolved checkpoint directory, including optional ``checkpoint.subdirectory``."""
+    base = cfg.resolve(cfg.data.checkpoint_dir)
+    extra = (cfg.checkpoint.subdirectory or "").strip()
+    return base / extra if extra else base
 
 
 def interim_dir(cfg: ProjectConfig) -> Path:
